@@ -1,0 +1,3 @@
+---
+# vars file for nexus-role
+image: sonarqube:7.1

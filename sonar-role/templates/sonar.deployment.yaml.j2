@@ -1,0 +1,28 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sonar
+  namespace: devops-tools
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: sonar-server
+  template:
+    metadata:
+      labels:
+        app: sonar-server
+    spec:
+      containers:
+        - name: sonar
+          image: {{image}} 
+          securityContext:
+            runAsUser: 0
+          ports:
+            - containerPort: 9000
+          volumeMounts:
+            - name: sonar-data
+              mountPath: /sonar-data
+      volumes:
+        - name: sonar-data
+          emptyDir: {}
