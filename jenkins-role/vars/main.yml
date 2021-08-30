@@ -1,0 +1,4 @@
+---
+# vars file for jenkins-role
+image: jenkins/jenkins:lts-jdk11
+
