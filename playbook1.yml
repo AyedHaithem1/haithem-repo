@@ -1,0 +1,91 @@
+- name: deploy CD
+  hosts:   
+    - 192.168.101.31
+    - 192.168.101.32  
+  #gather_facts: yes
+  remote_user: root
+  vars:
+      recursion: yes
+      servers:
+              - { hostname: kube-worker01, ip: 192.168.101.31 }
+              - { hostname: kube-worker02, ip: 192.168.101.32 }
+
+      ansible_python_interpreter: "{{ ansible_playbook_python }}"    
+  #become: yes
+
+  tasks:
+
+      - name : "git clone"
+        git:
+          repo: https://github.com/AyedHaithem1/cd.git
+          dest: /home/master01/cd/
+          version: master
+          force: yes
+      
+      - name: Copy file to perform the clean
+        template: src=/home/master01/ansible/deploy.sh dest=/home/master01/cd/ mode=0777           
+
+
+      - name: Maven Clean package and Docker Build with Skeeping errors
+        become: true
+        become_user: root
+        shell: cd /home/master01/cd/demo-rest-api; mvn clean package docker:build -DskipTests
+
+
+      - name: Docker Compose down
+        become: true
+        become_user: root
+        shell: cd /home/master01/cd;docker-compose down
+
+      - name: Docker Compose UP
+        become: true
+        become_user: root        
+        shell: cd /home/master01/cd;docker-compose up -d
+
+
+      - name: TAG mysql before the push to Dockerhub
+        become: true
+        become_user: root
+        shell: docker tag mysql/mysql-server:5.7 ayedhaithem/repoproject2021:${TAG:-mysql_v1}
+          
+      - name: Push MySql to Dockerhub
+        become: true
+        become_user: root
+        shell: docker push ayedhaithem/repoproject2021:${TAG:-mysql_v1}
+        ignore_errors: yes
+      
+        
+      - name: TAG springboot application before the push to Dockerhub
+        become: true
+        become_user: root
+        shell: docker tag ayedhaithem/demo-rest-api:0.0.1-SNAPSHOT ayedhaithem/repoproject2021:${TAG:-app_v1}
+
+      - name: push app to Dockerhub
+        become: true
+        become_user: root
+        shell: docker push ayedhaithem/repoproject2021:${TAG:-app_v1}
+        
+
+      - name: TAG adminer before the push to Dockerhub
+        become: true
+        become_user: root
+        shell: docker tag adminer ayedhaithem/repoproject2021:${TAG:-adminer_v1}
+
+
+      - name: push to adminer to Dockerhub
+        become: true
+        become_user: root
+        shell: docker push ayedhaithem/repoproject2021:${TAG:-adminer_v1} 
+
+
+
+  handlers:
+   #- name: restart apache2
+   #   service: name=apache2 state=restarted
+
+
+
+
+  handlers:
+   #- name: restart apache2
+   #   service: name=apache2 state=restarted
