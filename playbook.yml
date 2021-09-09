@@ -66,44 +66,7 @@
           mode: 'u+x,g+x'
 
 
-
-
-      - name : "git clone"
-        git:
-          repo: https://github.com/AyedHaithem1/cd.git
-          dest: /home/master01/cd/
-          version: master
-          force: yes
-#      - name: Run a command that uses non-posix shell-isms (in this example /bin/sh doesn't handle redirection and wildcards together but bash does)
-#        shell: cd 
-#        args:
-#          executable: /bin/bash
-      
-      - name: Define global server configuration options copy to /etc/bind/named.conf.options
-        template: src=/home/master01/ansible/deploy.sh dest=/home/master01/cd/ mode=0777           
-          
-      - name: MVN clean package and build
-        ansible.builtin.shell:
-        #become: root
-          #update_cache: yes  
-          cmd: mvn clean package docker:build -DskipTests 
-          chdir: "/home/master01/cd/demo-rest-api"
-          warn: False
-      - name: MVN clean package and build
-        ansible.builtin.shell:
-          cmd: docker-compose up -d
-          chdir: "/home/master01/cd"
-          warn: False
-
-
  
-  handlers:
-   #- name: restart apache2
-   #   service: name=apache2 state=restarted
-
-
-
-
   handlers:
    #- name: restart apache2
    #   service: name=apache2 state=restarted
