@@ -1,0 +1,105 @@
+- name: deploy CD
+  hosts:   
+    - 192.168.101.31
+  #gather_facts: yes
+  remote_user: master01
+  vars:
+      recursion: yes
+      servers:
+              - { hostname: kube-worker01, ip: 192.168.101.31 }
+
+      ansible_python_interpreter: "{{ ansible_playbook_python }}"    
+  #become: yes
+
+  tasks:
+
+
+      - name: Kubernetes deployment SQL image from dockerhub registre 
+        become: true
+        become_user: master01
+        shell: kubectl run mysql --image ayedhaithem/repoproject2021:${TAG:-mysql_v1}
+        ignore_errors: yes
+        register: command_output
+      - debug:
+             var: command_output.stdout_lines
+
+      - name: Kubernetes deployment ADMINER image from dockerhub registre
+        become: true
+        become_user: master01
+        shell: kubectl run adminer --image ayedhaithem/repoproject2021:${TAG:-adminer_v1}
+        ignore_errors: yes
+        register: command_output1
+      - debug:
+             var: command_output1.stdout_lines
+
+
+      - name: Ansible will delete the image from cluster kubernetes
+        become: true
+        become_user: master01
+        shell: kubectl delete pod adminer
+        ignore_errors: yes
+        register: command_output2
+      - debug:
+             var: command_output2.stdout_lines
+
+      - name: get the name of pods in the namespaces Devops-tools  
+        become: true
+        become_user: master01
+        shell: kubectl get svc --namespace devops-tools -o=jsonpath="{range .items[*]}{.metadata.name},{.metadata.namespace}{'\n'}{end}"
+        ignore_errors: yes
+        register: command_output3
+      - debug:
+             var: command_output3.stdout_lines
+
+      - name: get the name of all pods in all namespaces
+        become: true
+        become_user: master01
+        shell: kubectl get svc --all-namespaces -o=jsonpath="{range .items[*]}{.metadata.name},{.metadata.namespace}{'\n'}{end}"
+        ignore_errors: yes
+        register: command_output4
+      - debug:
+             var: command_output4.stdout_lines
+
+      - name: get the name of pod and the start time 
+        become: true
+        become_user: master01
+        shell: kubectl get pods --all-namespaces -o=jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.status.startTime}{"\n"}{end}'
+        ignore_errors: yes
+        register: command_output5
+      - debug:
+             var: command_output5.stdout_lines
+
+      - name: get the name of the pod and the status if running or not
+        become: true
+        become_user: master01
+        shell: kubectl get pods -o=jsonpath="{range .items[*]}{.metadata.name}{\"\t\"}{.status.phase}{\"\n\"}{end}"
+        ignore_errors: yes
+        register: command_output6
+      - debug:
+             var: command_output6.stdout_lines
+
+      - name: get the name of pod the start time and the node name related to it
+        become: true
+        become_user: master01
+        shell: kubectl get pods --all-namespaces -o=jsonpath='{range .items[*]}{.metadata.name}{"\t"}{"\t"}{.status.startTime}{"\t"}{"\t"}{.spec.nodeName}{"\t"}{"\n"}{end}'
+        ignore_errors: yes
+        register: command_output7
+      - debug:
+             var: command_output7.stdout_lines
+
+
+      - name: get all deployment and svc in all namespaces
+        become: true
+        become_user: master01
+        shell: kubectl get deploy,svc --all-namespaces
+        ignore_errors: yes
+        register: command_output8
+      - debug:
+             var: command_output8.stdout_lines
+
+             
+
+  handlers:
+   #- name: restart apache2
+   #   service: name=apache2 state=restarted
+
