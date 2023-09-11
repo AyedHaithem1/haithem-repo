@@ -1,0 +1,90 @@
+---
+- name: Generate Let's Encrypt SSL Certificates and Configure Nginx for SSL
+  hosts: localhost
+  remote_user: master01  
+  become: yes
+  vars:
+    domain: ayedhaithem.com
+    ansible_python_interpreter: /usr/bin/python3    
+    email: haithem.aayed@gmail.com
+    certbot_container_name: certbot
+    nginx_container_name: nginx_container
+    docker_network_name: letsencrypt_network
+    common_volumes:
+      - "/etc/letsencrypt:/etc/letsencrypt"
+      - "/var/lib/letsencrypt:/var/lib/letsencrypt"
+    nginx_config_template: "/home/master01/ansible/nginx-ssl-config.j2"  # Updated template name
+    nginx_config_dest: "/etc/nginx/conf.d/"  # Destination path within Nginx container
+ 
+    cloudflare_email: haithem.aayed@gmail.com
+    cloudflare_api_key: cloud-flare-api
+    certbot_config_dir: /etc/letsencrypt
+    certbot_config_file: cloudflare.ini
+
+
+  tasks:
+    - name: Stop and remove Nginx container
+      docker_container:
+        name: "{{ nginx_container_name }}"
+        state: absent
+
+    - name: Stop and remove Certbot container
+      docker_container:
+        name: "{{ certbot_container_name }}"
+        state: absent
+
+    - name: Remove Docker network
+      docker_network:
+        name: "{{ docker_network_name }}"
+        state: absent
+
+
+
+
+    - name: Create a Docker network
+      docker_network:
+        name: "{{ docker_network_name }}"
+
+
+
+
+
+
+
+
+    - name: Start Certbot container with DNS-01 challenge
+      docker_container:
+        name: "{{ certbot_container_name }}"
+        image: certbot/certbot
+        volumes:
+          - "{{ common_volumes }}:{{ common_volumes }}"
+        networks:
+
+
+    - name: Start Nginx container for the HTTP challenge
+      docker_container:
+        name: "{{ nginx_container_name }}"
+        image: nginx:alpine
+        ports:
+          - "80:80"
+          - "443:443"  # Expose port 443 for HTTPS
+        volumes: "{{ common_volumes }}"
+        networks:
+          - name: "{{ docker_network_name }}"
+        restart_policy: always
+
+    # Add tasks here to wait for the certificate issuance to complete, e.g., using a notify or custom logic.
+
+    - name: Generate Nginx SSL configuration file
+      command: "sudo docker cp /home/master01/ansible/nginx-ssl-config.j2 nginx_container:/etc/nginx/conf.d/"      
+
+    - name: Get public IP of Nginx container
+      docker_container_info:
+        name: "{{ nginx_container_name }}"
+      register: nginx_container_info
+
+    - debug:
+        var: nginx_container_info.ansible_facts.docker_container_info.NetworkSettings.Networks.bridge.IPAddress
+    - name: Debug Nginx container info
+      debug:
+        var: nginx_container_info        

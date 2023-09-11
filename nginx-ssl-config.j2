@@ -1,0 +1,47 @@
+server {
+    listen 80;
+    server_name {{ domain }};
+   
+    location / {
+        # Your HTTP configuration here
+    }
+}
+
+server {
+    listen 443 ssl;
+    server_name ayedhaithem.com;
+   
+    ssl_certificate /etc/letsencrypt/live/ayedhaithem.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/ayedhaithem.com/privkey.pem;
+   
+    # SSL settings
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_prefer_server_ciphers off;
+    ssl_ciphers "EECDH+AESGCM:EDH+AESGCM:AES256+EECDH:AES256+EDH";
+   
+    # SSL session cache settings
+    ssl_session_cache shared:SSL:10m;
+    ssl_session_timeout 10m;
+   
+    # Enable OCSP stapling for better SSL performance
+    ssl_stapling on;
+    ssl_stapling_verify on;
+   
+    # Your HTTPS configuration here
+    location / {
+        # Your HTTPS configuration here
+        gzip off;
+        root /usr/share/nginx/html/;
+        index index.html
+    }
+   
+    # Additional SSL-related settings can be added here
+   
+    # Enable HSTS (HTTP Strict Transport Security)
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains; preload" always;
+   
+    # Enable security-related HTTP headers
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header X-XSS-Protection "1; mode=block" always;
+}

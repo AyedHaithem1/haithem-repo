@@ -1,0 +1,110 @@
+- name: deploy CD
+  hosts: localhost  
+  #gather_facts: yes
+  remote_user: master01
+  become: yes
+
+  tasks:
+      - name: Create namespace Jenkins
+        shell: kubectl create ns devops-tools
+        ignore_errors: yes
+        register: command_output12
+      - debug:
+             var: command_output12.stdout_lines
+
+      - name: Create service account and role role binding
+        shell: kubectl create -f /home/master01/ansible/cluster.yml -n devops-tools
+        ignore_errors: yes
+        register: command_output15
+      - debug:
+             var: command_output15.stdout_lines
+
+      - name: Retrieve Jenkins admin password
+        command: sudo kubectl -n devops-tools exec deploy/jenkins cat /var/jenkins_home/secrets/initialAdminPassword 
+        register: jenkins_password
+      - debug:
+             var: jenkins_password.stdout_lines
+
+
+          
+
+      - name: Create Jenkins persistent volume
+        shell: kubectl apply -f /home/master01/ansible/volume.yaml  -n devops-tools
+
+        ignore_errors: yes
+        register: command_output10
+      - debug:
+             var: command_output10.stdout_lines
+
+      - name: Create Jenkins deployment
+        shell: kubectl apply -f /home/master01/ansible/deploy.yaml  -n devops-tools
+
+        ignore_errors: yes
+        register: command_output12
+      - debug:
+             var: command_output12.stdout_lines
+             
+
+      - name: Create Jenkins services nodeport  
+        shell: kubectl apply -f /home/master01/ansible/svc.yaml -n devops-tools
+        ignore_errors: yes
+        register: command_output14
+      - debug:
+             var: command_output14.stdout_lines
+
+
+      - name: get the name of pods in the namespaces Devops-tools  
+        become: true
+        shell: kubectl get svc --namespace devops-tools -o=jsonpath="{range .items[*]}{.metadata.name},{.metadata.namespace}{'\n'}{end}"
+        ignore_errors: yes
+        register: command_output3
+      - debug:
+             var: command_output3.stdout_lines
+
+      - name: get the name of all pods in all namespaces
+        become: true
+        shell: kubectl get svc --all-namespaces -o=jsonpath="{range .items[*]}{.metadata.name},{.metadata.namespace}{'\n'}{end}"
+        ignore_errors: yes
+        register: command_output4
+      - debug:
+             var: command_output4.stdout_lines
+
+      - name: get the name of pod and the start time 
+        become: true
+        shell: kubectl get pods --all-namespaces -o=jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.status.startTime}{"\n"}{end}'
+        ignore_errors: yes
+        register: command_output5
+      - debug:
+             var: command_output5.stdout_lines
+
+      - name: get the name of the pod and the status if running or not
+        become: true
+        shell: kubectl get pods -o=jsonpath="{range .items[*]}{.metadata.name}{\"\t\"}{.status.phase}{\"\n\"}{end}"
+        ignore_errors: yes
+        register: command_output6
+      - debug:
+             var: command_output6.stdout_lines
+
+      - name: get the name of pod the start time and the node name related to it
+        become: true
+        shell: kubectl get pods --all-namespaces -o=jsonpath='{range .items[*]}{.metadata.name}{"\t"}{"\t"}{.status.startTime}{"\t"}{"\t"}{.spec.nodeName}{"\t"}{"\n"}{end}'
+        ignore_errors: yes
+        register: command_output7
+      - debug:
+             var: command_output7.stdout_lines
+
+
+      - name: get all deployment and svc in all namespaces
+        become: true
+        shell: kubectl get deploy,svc --all-namespaces
+        ignore_errors: yes
+        register: command_output8
+      - debug:
+             var: command_output8.stdout_lines
+
+             
+
+  handlers:
+   #- name: restart apache2
+   #   service: name=apache2 state=restarted
+

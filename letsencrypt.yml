@@ -1,0 +1,180 @@
+- name: deploy CD
+  hosts:   
+    - 192.168.101.31
+  #gather_facts: yes
+  remote_user: master01
+  vars:
+      recursion: yes
+      servers:
+              - { hostname: kube-worker01, ip: 192.168.101.31 }
+
+      ansible_python_interpreter: "{{ ansible_playbook_python }}"    
+  #become: yes
+
+  tasks:
+---
+    - name: Deploy Jenkins on Kubernetes
+      hosts: localhost
+      gather_facts: no
+      tasks:
+    - name: Create Jenkins Namespace
+      k8s:
+        definition:
+          apiVersion: v1
+          kind: Namespace
+          metadata:
+            name: jenkins
+        state: present
+      register: namespace
+
+    - name: Deploy Jenkins
+      k8s:
+        definition: "{{ lookup('template', 'jenkins-deployment.yaml') }}"
+        state: present
+        namespace: jenkins
+      register: deployment
+
+    - name: Expose Jenkins Service
+      k8s:
+        definition: "{{ lookup('template', 'jenkins-service.yaml') }}"
+        state: present
+        namespace: jenkins
+      register: service
+
+    - name: Wait for Jenkins Deployment to be Ready
+      k8s_info:
+        kubeconfig: ~/.kube/config  # Specify the path to your kubeconfig file
+        definition:
+          kind: Deployment
+          name: jenkins
+          namespace: jenkins
+      register: jenkins_deployment_info
+      until: jenkins_deployment_info.resources[0].status.readyReplicas == jenkins_deployment_info.resources[0].status.replicas
+      retries: 60
+      delay: 10
+
+    - name: Get Jenkins URL
+      k8s_facts:
+        kubeconfig: ~/.kube/config  # Specify the path to your kubeconfig file
+        kind: Service
+        name: jenkins
+        namespace: jenkins
+      register: jenkins_service
+
+    - debug:
+        var: jenkins_service.resources[0].status.loadBalancer.ingress[0].hostname
+
+    - name: Wait for Jenkins Service to be Accessible
+      uri:
+        url: "http://{{ jenkins_service.resources[0].status.loadBalancer.ingress[0].hostname }}/login"
+        status_code: 200
+      register: jenkins_health_check
+      until: jenkins_health_check.status == 200
+      retries: 60
+      delay: 10
+
+    - name: Print Jenkins Login URL
+      debug:
+        msg: "Jenkins is accessible at http://{{ jenkins_service.resources[0].status.loadBalancer.ingress[0].hostname }}/login"
+
+
+
+
+
+
+
+
+
+
+
+
+
+      - name: Kubernetes deployment SQL image from dockerhub registre 
+        become: true
+        become_user: master01
+        shell: kubectl run mysql --image ayedhaithem/repoproject2021:${TAG:-mysql_v1}
+        ignore_errors: yes
+        register: command_output
+      - debug:
+             var: command_output.stdout_lines
+
+      - name: Kubernetes deployment ADMINER image from dockerhub registre
+        become: true
+        become_user: master01
+        shell: kubectl run adminer --image ayedhaithem/repoproject2021:${TAG:-adminer_v1}
+        ignore_errors: yes
+        register: command_output1
+      - debug:
+             var: command_output1.stdout_lines
+
+
+      - name: Ansible will delete the image from cluster kubernetes
+        become: true
+        become_user: master01
+        shell: kubectl delete pod adminer
+        ignore_errors: yes
+        register: command_output2
+      - debug:
+             var: command_output2.stdout_lines
+
+      - name: get the name of pods in the namespaces Devops-tools  
+        become: true
+        become_user: master01
+        shell: kubectl get svc --namespace devops-tools -o=jsonpath="{range .items[*]}{.metadata.name},{.metadata.namespace}{'\n'}{end}"
+        ignore_errors: yes
+        register: command_output3
+      - debug:
+             var: command_output3.stdout_lines
+
+      - name: get the name of all pods in all namespaces
+        become: true
+        become_user: master01
+        shell: kubectl get svc --all-namespaces -o=jsonpath="{range .items[*]}{.metadata.name},{.metadata.namespace}{'\n'}{end}"
+        ignore_errors: yes
+        register: command_output4
+      - debug:
+             var: command_output4.stdout_lines
+
+      - name: get the name of pod and the start time 
+        become: true
+        become_user: master01
+        shell: kubectl get pods --all-namespaces -o=jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.status.startTime}{"\n"}{end}'
+        ignore_errors: yes
+        register: command_output5
+      - debug:
+             var: command_output5.stdout_lines
+
+      - name: get the name of the pod and the status if running or not
+        become: true
+        become_user: master01
+        shell: kubectl get pods -o=jsonpath="{range .items[*]}{.metadata.name}{\"\t\"}{.status.phase}{\"\n\"}{end}"
+        ignore_errors: yes
+        register: command_output6
+      - debug:
+             var: command_output6.stdout_lines
+
+      - name: get the name of pod the start time and the node name related to it
+        become: true
+        become_user: master01
+        shell: kubectl get pods --all-namespaces -o=jsonpath='{range .items[*]}{.metadata.name}{"\t"}{"\t"}{.status.startTime}{"\t"}{"\t"}{.spec.nodeName}{"\t"}{"\n"}{end}'
+        ignore_errors: yes
+        register: command_output7
+      - debug:
+             var: command_output7.stdout_lines
+
+
+      - name: get all deployment and svc in all namespaces
+        become: true
+        become_user: master01
+        shell: kubectl get deploy,svc --all-namespaces
+        ignore_errors: yes
+        register: command_output8
+      - debug:
+             var: command_output8.stdout_lines
+
+             
+
+  handlers:
+   #- name: restart apache2
+   #   service: name=apache2 state=restarted
+

@@ -1,0 +1,52 @@
+- name: deploy CD
+  hosts:   
+    - 192.168.101.31
+  #gather_facts: yes
+  remote_user: master01
+  vars:
+      recursion: yes
+      servers:
+              - { hostname: kube-worker01, ip: 192.168.101.31 }
+
+      ansible_python_interpreter: "{{ ansible_playbook_python }}"    
+  #become: yes
+
+  tasks:
+
+      - name: Update package cache
+        apt:
+          update_cache: yes
+        when: ansible_os_family == 'Ubuntu'
+
+
+      - name: Install Certbot and Python3 Cloudflare DNS Plugin
+        become: true
+        
+        apt:
+          name:
+            - certbot
+            - python3-certbot-dns-cloudflare
+          state: present
+        when: ansible_os_family == 'Debian'
+
+      - name: Obtain an SSL Certificate
+        become: true
+        
+        shell: |
+          certbot certonly \
+            --dns-cloudflare --agress-tos \
+            --dns-cloudflare-credentials /path/to/cloudflare-credentials.ini \
+            -d ayedhaithem.com
+        environment:
+          CLOUDFLARE_EMAIL: haithem.aayed@gmail.com
+          CLOUDFLARE_API_KEY: your-cloudflare-api-key
+        when: "'ansible_os_family' == 'Debian'"
+
+      - name: Add SSL Certificate Renewal Cron Job
+        cron:
+          name: "Renew Let's Encrypt SSL Certificate"
+          minute: "0"
+          hour: "0"
+          job: "certbot renew --dns-cloudflare --dns-cloudflare-credentials /path/to/cloudflare-credentials.ini"
+        when: "'ansible_os_family' == 'Debian'"
+
